@@ -1,0 +1,11 @@
+fastapi>=0.104.0
+sqlmodel>=0.0.14
+python-jose[cryptography]
+passlib[bcrypt]
+uvicorn[standard]
+asyncpg
+pytest
+pytest-asyncio
+httpx
+pydantic[email]
+pydantic-settings

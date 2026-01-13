@@ -1,0 +1,709 @@
+openapi: 3.0.3
+info:
+  title: Phase II Todo API
+  description: |
+    REST API for the Phase II full-stack Todo web application.
+    Supports user authentication via JWT and CRUD operations for user-scoped tasks.
+  version: 2.0.0
+  contact:
+    name: Phase II Development Team
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+  - url: https://api.yourdomain.com/api/v1
+    description: Production server
+
+tags:
+  - name: authentication
+    description: User signup and login operations
+  - name: tasks
+    description: Task CRUD operations (requires authentication)
+
+paths:
+  /auth/signup:
+    post:
+      tags:
+        - authentication
+      summary: Register a new user
+      description: |
+        Creates a new user account with email and password.
+        Returns a JWT token for immediate authentication.
+        Implements FR-001, FR-002, FR-003, FR-004, FR-029.
+      operationId: signupUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+            examples:
+              validSignup:
+                summary: Valid signup request
+                value:
+                  email: user@example.com
+                  password: securepassword123
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                signupSuccess:
+                  summary: Successful signup
+                  value:
+                    user_id: "550e8400-e29b-41d4-a716-446655440000"
+                    email: user@example.com
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '400':
+          description: Validation error or email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    detail: "Invalid email format"
+                    error_code: "VALIDATION_ERROR"
+                    field_errors:
+                      email: "Must be a valid email address"
+                emailExists:
+                  summary: Email already registered
+                  value:
+                    detail: "Email already registered"
+                    error_code: "EMAIL_EXISTS"
+                passwordTooShort:
+                  summary: Password too short
+                  value:
+                    detail: "Validation error"
+                    error_code: "VALIDATION_ERROR"
+                    field_errors:
+                      password: "Password must be at least 8 characters"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - authentication
+      summary: Authenticate an existing user
+      description: |
+        Authenticates a user with email and password.
+        Returns a JWT token on successful authentication.
+        Implements FR-004, FR-030.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              validLogin:
+                summary: Valid login request
+                value:
+                  email: user@example.com
+                  password: securepassword123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                loginSuccess:
+                  summary: Successful login
+                  value:
+                    user_id: "550e8400-e29b-41d4-a716-446655440000"
+                    email: user@example.com
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  summary: Wrong email or password
+                  value:
+                    detail: "Invalid email or password"
+                    error_code: "INVALID_CREDENTIALS"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks:
+    get:
+      tags:
+        - tasks
+      summary: List all tasks for authenticated user
+      description: |
+        Returns all tasks owned by the authenticated user, sorted by creation date (newest first).
+        Implements FR-013, FR-031.
+      operationId: listTasks
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user's tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+              examples:
+                multipleTasks:
+                  summary: User with multiple tasks
+                  value:
+                    - id: "650e8400-e29b-41d4-a716-446655440001"
+                      title: "Complete project documentation"
+                      description: "Write README and API docs"
+                      completed: false
+                      created_at: "2026-01-08T10:00:00Z"
+                      updated_at: "2026-01-08T10:00:00Z"
+                    - id: "650e8400-e29b-41d4-a716-446655440002"
+                      title: "Review pull requests"
+                      description: null
+                      completed: true
+                      created_at: "2026-01-07T15:30:00Z"
+                      updated_at: "2026-01-08T09:00:00Z"
+                emptyList:
+                  summary: User with no tasks
+                  value: []
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingToken:
+                  summary: No token provided
+                  value:
+                    detail: "Not authenticated"
+                    error_code: "MISSING_TOKEN"
+                expiredToken:
+                  summary: Token expired
+                  value:
+                    detail: "Token has expired"
+                    error_code: "TOKEN_EXPIRED"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - tasks
+      summary: Create a new task
+      description: |
+        Creates a new task for the authenticated user.
+        Implements FR-008, FR-009, FR-010, FR-011, FR-012, FR-032.
+      operationId: createTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              withDescription:
+                summary: Task with description
+                value:
+                  title: "Implement user authentication"
+                  description: "Add JWT-based auth with signup and login endpoints"
+              titleOnly:
+                summary: Task with title only
+                value:
+                  title: "Fix bug in task list"
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              examples:
+                taskCreated:
+                  summary: Newly created task
+                  value:
+                    id: "750e8400-e29b-41d4-a716-446655440003"
+                    title: "Implement user authentication"
+                    description: "Add JWT-based auth with signup and login endpoints"
+                    completed: false
+                    created_at: "2026-01-08T14:30:00Z"
+                    updated_at: "2026-01-08T14:30:00Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingTitle:
+                  summary: Title not provided
+                  value:
+                    detail: "Validation error"
+                    error_code: "VALIDATION_ERROR"
+                    field_errors:
+                      title: "Title is required"
+                titleTooLong:
+                  summary: Title exceeds 100 characters
+                  value:
+                    detail: "Validation error"
+                    error_code: "VALIDATION_ERROR"
+                    field_errors:
+                      title: "Title must be 100 characters or less"
+                descriptionTooLong:
+                  summary: Description exceeds 500 characters
+                  value:
+                    detail: "Validation error"
+                    error_code: "VALIDATION_ERROR"
+                    field_errors:
+                      description: "Description must be 500 characters or less"
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks/{id}:
+    patch:
+      tags:
+        - tasks
+      summary: Update an existing task
+      description: |
+        Updates title, description, or completion status of the authenticated user's task.
+        All fields are optional; only provided fields are updated.
+        Implements FR-014, FR-033.
+      operationId: updateTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "750e8400-e29b-41d4-a716-446655440003"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+            examples:
+              updateTitle:
+                summary: Update title only
+                value:
+                  title: "Implement JWT authentication"
+              updateCompleted:
+                summary: Mark task complete
+                value:
+                  completed: true
+              updateAll:
+                summary: Update all fields
+                value:
+                  title: "Complete authentication implementation"
+                  description: "Add tests and documentation"
+                  completed: true
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+              examples:
+                taskUpdated:
+                  summary: Updated task
+                  value:
+                    id: "750e8400-e29b-41d4-a716-446655440003"
+                    title: "Complete authentication implementation"
+                    description: "Add tests and documentation"
+                    completed: true
+                    created_at: "2026-01-08T14:30:00Z"
+                    updated_at: "2026-01-08T16:45:00Z"
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Task belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notAuthorized:
+                  summary: Attempting to update another user's task
+                  value:
+                    detail: "Not authorized to access this task"
+                    error_code: "FORBIDDEN"
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                taskNotFound:
+                  summary: Task doesn't exist
+                  value:
+                    detail: "Task not found"
+                    error_code: "NOT_FOUND"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - tasks
+      summary: Delete a task
+      description: |
+        Permanently deletes the authenticated user's task.
+        Implements FR-015, FR-034.
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "750e8400-e29b-41d4-a716-446655440003"
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Task deleted successfully"
+              examples:
+                deleteSuccess:
+                  summary: Task deleted
+                  value:
+                    message: "Task deleted successfully"
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Task belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks/{id}/toggle:
+    post:
+      tags:
+        - tasks
+      summary: Toggle task completion status
+      description: |
+        Toggles the completed field between true and false.
+        Convenience endpoint for marking tasks complete/incomplete.
+        Implements FR-016, FR-035.
+      operationId: toggleTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Task UUID
+          schema:
+            type: string
+            format: uuid
+          example: "750e8400-e29b-41d4-a716-446655440003"
+      responses:
+        '200':
+          description: Task completion status toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  completed:
+                    type: boolean
+              examples:
+                toggledComplete:
+                  summary: Task marked complete
+                  value:
+                    id: "750e8400-e29b-41d4-a716-446655440003"
+                    completed: true
+                toggledIncomplete:
+                  summary: Task marked incomplete
+                  value:
+                    id: "750e8400-e29b-41d4-a716-446655440003"
+                    completed: false
+        '401':
+          description: Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Task belongs to another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /auth/signup or /auth/login.
+        Include in Authorization header as: Bearer <token>
+
+  schemas:
+    SignupRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: User's email address (must be unique)
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          maxLength: 255
+          description: User's password (min 8 characters, will be hashed)
+          example: securepassword123
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's registered email
+          example: user@example.com
+        password:
+          type: string
+          description: User's password
+          example: securepassword123
+
+    AuthResponse:
+      type: object
+      required:
+        - user_id
+        - email
+        - token
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        token:
+          type: string
+          description: JWT token for subsequent authenticated requests
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZXhwIjoxNzM2NDQ2NDAwfQ.signature"
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Task title (required, max 100 chars)
+          example: "Implement user authentication"
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Optional task description (max 500 chars)
+          example: "Add JWT-based auth with signup and login endpoints"
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Updated task title
+          example: "Complete user authentication"
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Updated task description
+          example: "Add tests and documentation"
+        completed:
+          type: boolean
+          description: Updated completion status
+          example: true
+
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - completed
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique task identifier
+          example: "750e8400-e29b-41d4-a716-446655440003"
+        title:
+          type: string
+          maxLength: 100
+          description: Task title
+          example: "Implement user authentication"
+        description:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Task description (optional)
+          example: "Add JWT-based auth with signup and login endpoints"
+        completed:
+          type: boolean
+          description: Task completion status
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp (ISO 8601)
+          example: "2026-01-08T14:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (ISO 8601)
+          example: "2026-01-08T14:30:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - detail
+        - error_code
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+          example: "Validation error"
+        error_code:
+          type: string
+          description: Machine-readable error code
+          enum:
+            - VALIDATION_ERROR
+            - EMAIL_EXISTS
+            - INVALID_CREDENTIALS
+            - MISSING_TOKEN
+            - TOKEN_EXPIRED
+            - TOKEN_INVALID
+            - FORBIDDEN
+            - NOT_FOUND
+            - INTERNAL_ERROR
+          example: "VALIDATION_ERROR"
+        field_errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: Field-specific validation errors (optional)
+          example:
+            title: "Title must be 100 characters or less"
+            email: "Must be a valid email address"
