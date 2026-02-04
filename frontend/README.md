@@ -46,6 +46,17 @@ npm run start
 
 The application will be available at `http://localhost:3000`
 
+## Deployment to Vercel
+
+This frontend is Vercel deployment-ready! See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+
+**Quick Deploy:**
+1. Push code to GitHub
+2. Import project in [Vercel Dashboard](https://vercel.com/new)
+3. Set root directory to `frontend`
+4. Add environment variable: `NEXT_PUBLIC_API_URL`
+5. Deploy! 🚀
+
 ### Testing
 
 Run tests:
