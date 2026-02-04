@@ -83,3 +83,10 @@ dist/
 build/
 *.pyc
 *.pyo
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Temporary files
+nul
+

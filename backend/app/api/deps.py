@@ -4,7 +4,7 @@ Dependency injection for database session and current user authentication.
 """
 from typing import AsyncGenerator
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -29,7 +29,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def get_current_user(
-    credentials: HTTPAuthCredentials = Depends(security),
+    credentials: HTTPBearer = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """

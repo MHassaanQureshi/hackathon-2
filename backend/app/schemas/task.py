@@ -4,7 +4,7 @@ Pydantic models for task request/response validation.
 """
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class TaskCreate(BaseModel):
@@ -40,20 +40,22 @@ class TaskResponse(BaseModel):
 
     Attributes:
         id: Task ID
-        user_id: Owner user ID
+        user_id: Owner user ID (serialized as userId in JSON)
         title: Task title
         description: Task description (can be null)
         completed: Completion status
-        created_at: Creation timestamp
-        updated_at: Last update timestamp
+        created_at: Creation timestamp (serialized as createdAt in JSON, ISO 8601 format)
+        updated_at: Last update timestamp (serialized as updatedAt in JSON, ISO 8601 format)
     """
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
     id: int
-    user_id: int
+    user_id: int = Field(serialization_alias='userId')
     title: str
     description: Optional[str]
     completed: bool
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    created_at: datetime = Field(serialization_alias='createdAt')
+    updated_at: datetime = Field(serialization_alias='updatedAt')
