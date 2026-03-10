@@ -45,6 +45,24 @@ class Settings(BaseSettings):
         description="Logging level"
     )
 
+    # Phase III — AI Agent Configuration
+    LLM_PROVIDER: str = Field(
+        default="gemini",
+        description="LLM provider: 'gemini' (default/dev) or 'openai' (eval)"
+    )
+    GEMINI_API_KEY: str = Field(
+        default="",
+        description="Google Gemini API key — required when LLM_PROVIDER=gemini"
+    )
+    OPENAI_API_KEY: str = Field(
+        default="",
+        description="OpenAI API key — required when LLM_PROVIDER=openai"
+    )
+    PHASE2_API_BASE_URL: str = Field(
+        default="http://localhost:8000/api/v1",
+        description="Base URL for Phase II REST API (used by MCP tools)"
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = True

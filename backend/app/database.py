@@ -9,6 +9,9 @@ from sqlmodel import SQLModel
 
 from app.config import settings
 
+# Import all models so SQLModel.metadata includes them for create_all
+import app.models  # noqa: F401 — registers User, Task, Conversation, Message
+
 
 # Create async engine
 engine = create_async_engine(

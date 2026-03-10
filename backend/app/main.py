@@ -98,5 +98,9 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Register API v1 router
+# Register API v1 router (Phase II)
 app.include_router(api_router, prefix="/api/v1")
+
+# Register Phase III agent router — POST /api/{user_id}/chat
+from app.agent.endpoint import router as agent_router  # noqa: E402
+app.include_router(agent_router, prefix="/api")
