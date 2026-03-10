@@ -29,6 +29,9 @@ export default function RootLayout({
               <Link href="/tasks" style={styles.navLink}>
                 Tasks
               </Link>
+              <Link href="/chat" style={styles.navLink}>
+                Chat
+              </Link>
             </div>
           </div>
         </nav>
